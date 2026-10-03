@@ -578,6 +578,40 @@ local function percentText(step)
     return function(v) return (v * step) .. "%" end
 end
 
+local APP_URL = "https://github.com/bssdmnc/rgb-unit-bars/releases"
+
+StaticPopupDialogs["RGBUNITBARS_APP"] = {
+    text = "|cffff00ffRGB Unit Bars|r needs its free desktop app to light up your keyboard.\n\nCopy this link (Ctrl+C) and open it in your browser, then run RGBUnitBars.exe once — it starts with Windows from then on.",
+    button1 = OKAY,
+    hasEditBox = true,
+    editBoxWidth = 320,
+    OnShow = function(self)
+        local editBox = self.editBox or (self.GetEditBox and self:GetEditBox())
+        if editBox then
+            editBox:SetText(APP_URL)
+            editBox:HighlightText()
+            editBox:SetFocus()
+        end
+    end,
+    EditBoxOnEscapePressed = function(self)
+        self:GetParent():Hide()
+    end,
+    EditBoxOnTextChanged = function(self)
+        if self:GetText() ~= APP_URL then
+            self:SetText(APP_URL)
+            self:HighlightText()
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+local function showAppNotice()
+    StaticPopup_Show("RGBUNITBARS_APP")
+end
+
 local function buildPanel()
     addText("RGB Unit Bars", "GameFontNormalLarge", 16, -16)
     addText("Shows your health, power, combo points and cast bar on an RGB keyboard. Requires the RGB Unit Bars desktop app.", "GameFontHighlightSmall", 16, -40)
@@ -628,6 +662,12 @@ local function buildPanel()
         refreshPanel()
     end)
 
+    local getApp = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    getApp:SetSize(160, 24)
+    getApp:SetPoint("TOPRIGHT", -16, -44)
+    getApp:SetText("Get the desktop app")
+    getApp:SetScript("OnClick", showAppNotice)
+
     panel:SetScript("OnShow", refreshPanel)
 end
 
@@ -661,6 +701,8 @@ SlashCmdList.RGBUNITBARS = function(message)
     elseif command == "demo" then
         demo = not demo
         print("|cffff00ffRGB Unit Bars|r preview " .. (demo and "on" or "off"))
+    elseif command == "app" then
+        showAppNotice()
     else
         openPanel()
     end
@@ -688,6 +730,10 @@ frame:SetScript("OnEvent", function(_, event, name)
     if event == "PLAYER_ENTERING_WORLD" and settings then
         migrateColors()
         apply()
+        if not RGBUnitBarsDB.appNoticeShown then
+            RGBUnitBarsDB.appNoticeShown = true
+            C_Timer.After(3, showAppNotice)
+        end
         return
     end
     layout()

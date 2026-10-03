@@ -1,20 +1,34 @@
 import argparse
+import ctypes
+import sys
 import time
 
-from .devices import DEVICES, DeviceUnavailable
-from .devices.k3max import KEYCHRON_VID
-from .devices.via import find_raw_hid
-from .render import KeyboardGeometry, render
-from .wow_link import WowLink
+from . import __version__, autostart
+from .devices import DEVICES
+from .engine import Engine
+from .paths import frozen, load_config, save_config, setup_logging
 
-FPS = 20
-KEEPALIVE = 0.5
-IDLE_AFTER = 1.5
-STATUS_TEXT = {
-    "ok": "Reading health/power from WoW.",
-    "no-addon": "WoW found, but the addon strip is not visible (loading screen, exclusive fullscreen, UI hidden or addon disabled).",
-    "no-wow": "WoW window not found or minimized.",
-}
+MUTEX_NAME = "Local\\RGBUnitBarsSingleInstance"
+ERROR_ALREADY_EXISTS = 183
+
+
+def single_instance():
+    handle = ctypes.windll.kernel32.CreateMutexW(None, False, MUTEX_NAME)
+    if ctypes.windll.kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
+        return None
+    return handle
+
+
+def first_run_setup(log):
+    config = load_config()
+    if frozen() and not config.get("autostart_initialized"):
+        try:
+            autostart.set_enabled(True)
+            log.info("Enabled start with Windows")
+        except OSError:
+            log.exception("Could not enable start with Windows")
+        config["autostart_initialized"] = True
+        save_config(config)
 
 
 def main():
@@ -23,64 +37,42 @@ def main():
     parser.add_argument("--openrgb-host", default="127.0.0.1")
     parser.add_argument("--openrgb-port", type=int, default=6742)
     parser.add_argument("--keyboard", default="", help="OpenRGB: pick the keyboard whose name contains this text")
+    parser.add_argument("--console", action="store_true", help="run without the tray icon, log to the console")
+    parser.add_argument("--minimized", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
-    if args.device == "auto":
-        args.device = "k3max" if find_raw_hid(KEYCHRON_VID, exclude_product="Link") else "openrgb"
-    if args.device == "openrgb":
-        device = DEVICES["openrgb"](args.openrgb_host, args.openrgb_port, args.keyboard)
-    else:
-        device = DEVICES[args.device]()
-    waiting = False
-    while True:
-        try:
-            device.prepare()
-            break
-        except DeviceUnavailable as error:
-            if not waiting:
-                print(f"Waiting for keyboard: {error}")
-                waiting = True
-            time.sleep(2)
-    geometry = KeyboardGeometry(device.leds, device.row_tolerance)
-    link = WowLink()
-    print(f"RGB Unit Bars: {device.name}. Ctrl+C to stop.")
+    console = args.console or not frozen()
+    log = setup_logging(console=console)
+    mutex = single_instance()
+    if mutex is None:
+        log.info("Another RGB Unit Bars is already running; exiting")
+        return
+    log.info("RGB Unit Bars %s starting (%s)", __version__, "packaged" if frozen() else "source")
+    first_run_setup(log)
 
-    last_colors, last_sent, status, offline = None, 0.0, None, False
-    last_state_at, idle = 0.0, True
-    try:
-        while True:
-            started = time.monotonic()
-            reading, new_status = link.read()
-            state, settings = reading if reading else (None, None)
-            if new_status != status:
-                status = new_status
-                print(STATUS_TEXT[status])
-            if state is None and not idle and started - last_state_at > IDLE_AFTER:
-                device.idle()
-                idle, last_colors = True, None
-            if state is not None:
-                last_state_at, idle = started, False
-                colors = render(state, settings, geometry, started)
-                if colors != last_colors or started - last_sent > KEEPALIVE:
-                    try:
-                        device.send(colors)
-                        last_colors, last_sent = colors, started
-                        if offline:
-                            print("Keyboard connected.")
-                            offline = False
-                    except DeviceUnavailable as error:
-                        if not offline:
-                            print(f"Keyboard unavailable: {error}. Retrying...")
-                            offline = True
-                        time.sleep(1)
-            time.sleep(max(0.0, 1 / FPS - (time.monotonic() - started)))
-    except KeyboardInterrupt:
-        pass
-    finally:
-        device.close()
-        link.close()
-    print("Stopped. Keyboard lighting returns to normal in ~1.5 s.")
+    engine = Engine(args.device, args.openrgb_host, args.openrgb_port, args.keyboard)
+    engine.start()
+
+    if args.console:
+        try:
+            while engine.is_alive():
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            pass
+        engine.stop()
+        engine.join(5)
+        log.info("Stopped. Keyboard lighting returns to normal in ~1.5 s.")
+        return
+
+    from .tray import Tray
+
+    def shutdown():
+        engine.stop()
+        engine.join(5)
+        log.info("Stopped from tray")
+
+    Tray(engine, shutdown).run()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -23,7 +23,11 @@ No game memory is read and no input is sent to the game. The addon only draws a 
 | `app/rgbunitbars/devices/openrgb_sdk.py` | OpenRGB SDK client driver (any keyboard OpenRGB drives per key). Used unless a K3 Max is plugged in (`--device auto`). |
 | `firmware/keychron_k3_max/` | QMK keymap that adds a host-controlled RGB effect (`MUSIC_DIRECT`) + Fn-lock (Fn+Esc). `build.sh` builds it in WSL/Linux. |
 | `extras/` | Non-WoW demos for the same firmware: `music_eq.py` (16-band audio spectrum), `music_rgb.py` (beat-reactive global color). |
-| `run.bat` | Starts the desktop app (`python -m rgbunitbars`). |
+| `app/rgbunitbars/engine.py` | Background thread: picks the backend, opens the keyboard, runs the read → render → send loop, publishes a status for the tray. Polls gently while waiting (WoW absent: every 2 s, strip not visible: every 0.5 s). |
+| `app/rgbunitbars/tray.py`, `autostart.py`, `paths.py` | Tray icon + menu (status, keyboard, *Start with Windows*, log, update notice from GitHub Releases), HKCU `Run` autostart, `%LOCALAPPDATA%\RGBUnitBars` (log, config). |
+| `app/rgbunitbars/openrgb_server.py` | Starts a hidden OpenRGB SDK server when none is listening: bundled copy (unpacked to `%LOCALAPPDATA%\RGBUnitBars\openrgb`) or the system install; isolated `--config` dir; stopped on exit. |
+| `packaging/` | `build.ps1` (PyInstaller one-file exe with OpenRGB bundled + addon zip into `dist/`), `entry.py`, `icon.ico`, `THIRD_PARTY_NOTICES.md`. |
+| `run.bat` | Starts the desktop app from source (`python -m rgbunitbars`, tray; add `--console` for a console run). |
 
 ## Pixel protocol (addon → app), version 3
 
@@ -92,6 +96,15 @@ python -m rgbunitbars --device openrgb --openrgb-port 6743
 ```
 
 Read back `client.devices[0].colors` through `matrix_map` to assert which keys are lit. The debug keyboard has a 21×6 ANSI key matrix plus a 10×3 underglow matrix — a good check that only the key matrix is driven.
+
+## Releasing
+
+1. Bump `app/rgbunitbars/__init__.py` `__version__` **and** `## Version` in `RGBUnitBars.toc` — they must match (the pixel protocol changes in lock-step; `build.ps1` refuses mismatches).
+2. `powershell packaging\build.ps1` (needs Python with `app/requirements.txt` + `pyinstaller`, and OpenRGB installed in `C:\Program Files\OpenRGB` or `OPENRGB_DIR`). Output: `dist/RGBUnitBars-<v>.exe` (~50 MB) and `dist/RGBUnitBars-<v>.zip` (addon, `RGBUnitBars/` at the zip root).
+3. GitHub Release `v<v>` on `bssdmnc/rgb-unit-bars` with the exe attached — the tray's update check reads `releases/latest`, the addon's first-login popup links to the releases page (`APP_URL` in the Lua, `GITHUB_REPO` in `tray.py`).
+4. Upload the zip to CurseForge. CurseForge rejects executables and external file links, so the exe never goes there.
+
+Packaged-app behaviour: single instance (named mutex `Local\RGBUnitBarsSingleInstance`), the first packaged run enables *Start with Windows* once (`config.json: autostart_initialized`), the tray toggles it. When testing a packaged build on a dev machine set `autostart_initialized` first so the Run key does not point at `build/out`.
 
 ## Building the K3 Max firmware
 

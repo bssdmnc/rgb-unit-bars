@@ -3,3 +3,5 @@ mss>=10
 numpy>=1.26
 soundcard>=0.4.3
 openrgb-python>=0.3
+pystray>=0.19
+Pillow>=10

@@ -25,22 +25,26 @@ Works on WoW Forever / Classic beta (`Interface 16001`) and Classic Era (`11509`
 
 Keyboards that OpenRGB only exposes as a single zone (no per-key matrix) get one row instead of bars.
 
-## Install with OpenRGB (most keyboards, Windows)
+## Install (Windows)
 
-1. Install [OpenRGB](https://openrgb.org/releases.html) and check that it shows your keyboard. If the keyboard does not react, close vendor RGB apps (Synapse, iCUE, G HUB…) — they fight over the lighting.
-2. In OpenRGB open **SDK Server** and click **Start Server** (or start OpenRGB with `--server`). Leave OpenRGB running.
-3. Copy `addon/RGBUnitBars` into `World of Warcraft\_classic_beta_\Interface\AddOns\` (or `_classic_era_`), restart the game and enable *RGB Unit Bars*.
-4. Use *Windowed* or *Windowed (Fullscreen)* mode in the game.
-5. Install Python 3.11+, run `pip install -r app/requirements.txt`, then start `run.bat`. With several keyboards pick one by name: `run.bat --keyboard huntsman`.
+1. **Addon** — install *RGB Unit Bars* from CurseForge (or copy `addon/RGBUnitBars` into `World of Warcraft\_classic_beta_\Interface\AddOns\` / `_classic_era_`). On your first login it shows a link to the desktop app; `/rub app` shows it again.
+2. **Desktop app** — download `RGBUnitBars-<version>.exe` from [GitHub Releases](https://github.com/bssdmnc/rgb-unit-bars/releases) and run it once. It lives in the system tray, starts with Windows (untick *Start with Windows* in the tray menu to stop that) and wakes up by itself when WoW is open. No Python, no setup.
+3. **Game settings** — use *Windowed* or *Windowed (Fullscreen)* mode.
 
-When the game is minimized or loading, the keyboard returns to its previous OpenRGB mode after 1.5 s.
+The app ships with [OpenRGB](https://openrgb.org) 1.0 inside: if no OpenRGB server is running, it starts its own copy in the background (no window) and stops it on exit. If you already use OpenRGB, enable its **SDK Server** and the app uses that instead. If the keyboard does not react, close vendor RGB apps (Synapse, iCUE, G HUB…) — they fight over the lighting.
+
+The tray menu shows the current status and the keyboard in use, opens the log (`%LOCALAPPDATA%\RGBUnitBars\log.txt`) and tells you when a new release is out. When the game is minimized or loading, the keyboard returns to its previous lighting after 1.5 s.
+
+### Running from source
+
+Python 3.11+: `pip install -r app/requirements.txt`, then `run.bat` (tray) or `run.bat --console`. Options: `--keyboard huntsman` picks an OpenRGB keyboard by name, `--device k3max|openrgb` forces a backend. Build the `.exe` and the addon zip with `packaging\build.ps1`.
 
 ## Install (Keychron K3 Max, Windows)
 
 1. **Firmware** — flash `firmware/keychron_k3_max/rgb_unit_bars_k3_max_ansi_rgb.bin` with [QMK Toolbox](https://github.com/qmk/qmk_toolbox): unplug the keyboard, set the side switch to cable mode, hold **Esc** while plugging it in, then click *Flash*. To go back, flash `keychron_k3_max_ansi_rgb_via_official.bin` the same way.
 2. **Addon** — copy `addon/RGBUnitBars` into `World of Warcraft\_classic_beta_\Interface\AddOns\` (or `_classic_era_`), restart the game and enable *RGB Unit Bars*.
 3. **Game settings** — use *Windowed* or *Windowed (Fullscreen)* mode.
-4. **App** — install Python 3.11+, run `pip install -r app/requirements.txt`, connect the keyboard **by cable**, then start `run.bat` (a plugged-in K3 Max is picked automatically; force it with `run.bat --device k3max`).
+4. **App** — run `RGBUnitBars.exe` with the keyboard connected **by cable**; a plugged-in K3 Max is picked automatically.
 
 When WoW is minimized or on a loading screen the keyboard returns to its normal effect within 1.5 s.
 
@@ -62,7 +66,7 @@ The custom K3 Max firmware also adds an **Fn-lock**: `Fn+Esc` swaps the top row 
 - [x] Pixel protocol, K3 Max firmware, desktop app, rogue / mana / rage layouts
 - [x] In-game settings panel (`/rub`): colours, row split, low-health threshold, preview mode
 - [x] OpenRGB backend for non-QMK keyboards (tested against OpenRGB 1.0 debug devices)
-- [ ] Single-file `.exe` and CurseForge package
+- [x] Single-file `.exe` (tray, autostart, bundled OpenRGB, update notice) and CurseForge zip
 - [ ] Dedicated Druid mode
 
 ## For developers and AI agents
