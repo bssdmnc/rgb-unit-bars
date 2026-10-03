@@ -1,0 +1,9 @@
+## Interface: 16001, 11509
+## Title: RGB Unit Bars
+## Notes: Shows your health, power, combo points and cast bar on an RGB keyboard (requires the free RGB Unit Bars desktop app)
+## Author: introqtua
+## IconTexture: Interface\AddOns\RGBUnitBars\icon
+## Version: 0.1.0
+## SavedVariables: RGBUnitBarsDB
+
+RGBUnitBars.lua
