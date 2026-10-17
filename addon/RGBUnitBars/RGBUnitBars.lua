@@ -28,12 +28,7 @@ local deathTest = false
 
 local DEFAULTS = {
     enabled = true,
-    comboRows = 0,
-    healthRows = 1,
-    powerRows = 1,
-    castRows = 2,
-    castMode = 1,
-    order = 2,
+    classLayouts = {},
     castInvert = false,
     castMirror = false,
     dim = 2,
@@ -49,6 +44,24 @@ local DEFAULTS = {
     },
     classColors = {},
 }
+
+local BAR_KEYS = {
+    comboRows = true,
+    healthRows = true,
+    powerRows = true,
+    castRows = true,
+    castMode = true,
+    order = true,
+}
+local OLD_BAR_DEFAULTS = {
+    comboRows = 0,
+    healthRows = 1,
+    powerRows = 1,
+    castRows = 2,
+    castMode = 1,
+    order = 2,
+}
+local LEGACY_BAR_KEYS = {"comboRows", "healthRows", "powerRows", "castRows", "castMode", "order"}
 
 local FALLBACK_HEALTH = {0, 1, 0}
 local POWER_COLORS = {
@@ -91,7 +104,62 @@ local CORNERS = {"Top left", "Top right", "Bottom left", "Bottom right"}
 local CORNER_POINTS = {"TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT"}
 
 local settings
+local barSettings
 local demo = false
+
+local function defaultBarSettings(class)
+    if class == "ROGUE" then
+        return {comboRows = 2, healthRows = 2, powerRows = 2, castRows = 2, castMode = 0, order = 2}
+    end
+    if class == "WARRIOR" or class == "HUNTER" then
+        return {comboRows = 0, healthRows = 3, powerRows = 3, castRows = 2, castMode = 0, order = 2}
+    end
+    return {comboRows = 0, healthRows = 2, powerRows = 2, castRows = 2, castMode = 1, order = 2}
+end
+
+local function activateClassLayout(class)
+    if not settings then
+        return
+    end
+    if not class or class == "UNKNOWN" then
+        barSettings = barSettings or defaultBarSettings("UNKNOWN")
+        return
+    end
+    if type(settings.classLayouts) ~= "table" then
+        settings.classLayouts = {}
+    end
+    local profile = settings.classLayouts[class]
+    if type(profile) ~= "table" then
+        profile = defaultBarSettings(class)
+        for _, key in ipairs(LEGACY_BAR_KEYS) do
+            local oldValue = settings[key]
+            if oldValue ~= nil and oldValue ~= OLD_BAR_DEFAULTS[key] then
+                profile[key] = oldValue
+            end
+            settings[key] = nil
+        end
+        settings.classLayouts[class] = profile
+    else
+        for key, value in pairs(defaultBarSettings(class)) do
+            if profile[key] == nil then
+                profile[key] = value
+            end
+        end
+    end
+    barSettings = profile
+end
+
+local function getSetting(key)
+    return BAR_KEYS[key] and barSettings[key] or settings[key]
+end
+
+local function setSetting(key, value)
+    if BAR_KEYS[key] then
+        barSettings[key] = value
+    else
+        settings[key] = value
+    end
+end
 
 local function deepCopy(value)
     if type(value) ~= "table" then
@@ -400,10 +468,10 @@ local function updateSettingsPixels()
         local c = getColor(key)
         paintRGB(P.colors + i - 1, c[1], c[2], c[3])
     end
-    paintRGB(P.rows, step(settings.comboRows), step(settings.healthRows), step(settings.powerRows))
+    paintRGB(P.rows, step(barSettings.comboRows), step(barSettings.healthRows), step(barSettings.powerRows))
     local flags = (settings.pulse and 1 or 0) + (settings.comboFlash and 2 or 0)
     paintRGB(P.effects, step(settings.dim), step(settings.lowHealth), step(flags))
-    paintRGB(P.castConfig, step(settings.castMode), step(settings.castRows), step(settings.order))
+    paintRGB(P.castConfig, step(barSettings.castMode), step(barSettings.castRows), step(barSettings.order))
     updateEventPixels(GetTime())
 end
 
@@ -514,8 +582,8 @@ local function addSlider(label, key, minValue, maxValue, format, x, y)
     end
     slider:SetScript("OnValueChanged", function(_, value)
         value = math.floor(value + 0.5)
-        if settings[key] ~= value then
-            settings[key] = value
+        if getSetting(key) ~= value then
+            setSetting(key, value)
             apply()
         end
         show(value)
@@ -524,8 +592,8 @@ local function addSlider(label, key, minValue, maxValue, format, x, y)
         self:SetValue(self:GetValue() + delta)
     end)
     table.insert(refreshers, function()
-        slider:SetValue(settings[key])
-        show(settings[key])
+        slider:SetValue(getSetting(key))
+        show(getSetting(key))
     end)
 end
 
@@ -537,11 +605,11 @@ local function addCycle(label, key, options, x, y)
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     button:SetScript("OnClick", function(_, mouse)
         local step = mouse == "RightButton" and -1 or 1
-        settings[key] = (settings[key] + step) % #options
-        button:SetText(options[settings[key] + 1])
+        setSetting(key, (getSetting(key) + step) % #options)
+        button:SetText(options[getSetting(key) + 1])
         apply()
     end)
-    table.insert(refreshers, function() button:SetText(options[settings[key] + 1]) end)
+    table.insert(refreshers, function() button:SetText(options[getSetting(key) + 1]) end)
 end
 
 local function openColorPicker(key, swatch)
@@ -643,17 +711,20 @@ end
 
 local function buildPanel()
     addText("RGB Unit Bars", "GameFontNormalLarge", 16, -16)
-    addText("Shows your health, power, combo points and cast bar on an RGB keyboard. Requires the RGB Unit Bars desktop app.", "GameFontHighlightSmall", 16, -40)
+    addText("Shows your health, power, combo points and cast bar on an RGB keyboard. Requires the RGB Unit Bars desktop app. Keychron K3 Max currently needs a USB cable; Bluetooth support is planned.", "GameFontHighlightSmall", 16, -40)
 
     addCheckbox("Enabled", 16, -64, function() return settings.enabled end, function(v) settings.enabled = v end)
     addCheckbox("Preview mode (fake values)", 16, -92, function() return demo end, function(v) demo = v end)
 
-    addText("Keyboard rows (top to bottom, scaled to your keyboard)", "GameFontNormal", 16, -136)
+    local rowsLabel = addText("", "GameFontNormal", 16, -136)
+    table.insert(refreshers, function()
+        rowsLabel:SetText("Rows for " .. (UnitClass("player") or "this class") .. " (saved per class)")
+    end)
     addSlider("Combo point rows", "comboRows", 0, 3, rowsText, 20, -160)
     addSlider("Health rows", "healthRows", 1, 5, rowsText, 20, -205)
     addSlider("Power rows", "powerRows", 1, 5, rowsText, 20, -250)
-    addSlider("Cast bar rows (\"Own rows\" mode)", "castRows", 1, 5, rowsText, 20, -295)
-    addCycle("Row order under combo points", "order", ORDERS, 20, -340)
+    addSlider("Cast bar rows", "castRows", 1, 5, rowsText, 20, -295)
+    addCycle("Bar order", "order", ORDERS, 20, -340)
 
     addText("Effects", "GameFontNormal", 16, -400)
     addSlider("Empty bar glow", "dim", 0, 6, percentText(5), 20, -424)
@@ -662,7 +733,7 @@ local function buildPanel()
     addCheckbox("Flash combo points at maximum", 16, -544, function() return settings.comboFlash end, function(v) settings.comboFlash = v end)
 
     addText("Cast bar", "GameFontNormal", 330, -136)
-    addCycle("Show cast bar", "castMode", CAST_MODES, 334, -160)
+    addCycle("Cast bar mode", "castMode", CAST_MODES, 334, -160)
     addCheckbox("Invert (bar empties while casting)", 330, -202, function() return settings.castInvert end, function(v) settings.castInvert = v end)
     addCheckbox("Fill from right to left", 330, -230, function() return settings.castMirror end, function(v) settings.castMirror = v end)
 
@@ -687,6 +758,8 @@ local function buildPanel()
         wipe(settings)
         mergeDefaults(settings, DEFAULTS)
         settings.enabled = enabled
+        barSettings = nil
+        activateClassLayout(playerClass())
         apply()
         refreshPanel()
     end)
@@ -767,6 +840,7 @@ frame:SetScript("OnEvent", function(_, event, name)
         RGBUnitBarsDB.settings = RGBUnitBarsDB.settings or {}
         settings = RGBUnitBarsDB.settings
         mergeDefaults(settings, DEFAULTS)
+        activateClassLayout(playerClass())
         migrateColors()
         buildPanel()
         registerPanel()
@@ -774,9 +848,11 @@ frame:SetScript("OnEvent", function(_, event, name)
         return
     end
     if event == "PLAYER_ENTERING_WORLD" and settings then
+        activateClassLayout(playerClass())
         migrateColors()
         updatePlayerDeathState()
         apply()
+        refreshPanel()
         if not RGBUnitBarsDB.appNoticeShown then
             RGBUnitBarsDB.appNoticeShown = true
             C_Timer.After(3, showAppNotice)

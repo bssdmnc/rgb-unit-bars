@@ -2,14 +2,19 @@
 
 Your World of Warcraft health, power and combo points — live on your RGB keyboard.
 
+The Keychron K3 Max currently connects by USB cable; Bluetooth support is planned.
+
 | Class / resource | Keyboard layout (top → bottom) |
 |---|---|
-| Rogue, Druid in Cat Form (energy) | combo points · health · energy |
-| Warrior, Druid in Bear Form (rage) | health · rage |
-| Mana users | health · mana |
+| Class | Default rows |
+|---|---|
+| Rogue | 2 combo · 2 health · 2 energy |
+| Warrior, Hunter | 3 health · 3 power |
+| Druid | 2 health · 2 power · 2 cast; power colour follows form |
+| Other classes | 2 health · 2 power · 2 cast |
 
 * Health uses your class colour (green when it would clash with your resource) and fades to red, pulsing below 25 %. Health and resource colours can be changed per class in `/rub`.
-* Combo points light up in five groups and flash at 5 — finisher time.
+* Combo points are enabled by default for rogues only; they light up in five groups and flash at 5 — finisher time.
 * Level-ups fill the keyboard with a hot-orange disk expanding from the center, keeping passed keys dimly shimmering until the return phase contracts a vertical orange band with two fading sparks; lighting stays off after death until you release your spirit, then a neutral gray-white wave continues until resurrection.
 * Test these effects in-game with `/rub dev levelup` or `/rub dev dead`; run `/rub dev clear` afterward to restore your actual alive/dead state. `/rub dev` lists these commands.
 * Empty parts of a bar stay faintly lit so you always see the full scale.
@@ -46,7 +51,7 @@ Python 3.11+: `pip install -r app/requirements.txt`, then `run.bat` (tray) or `r
 1. **Firmware** — flash `firmware/keychron_k3_max/rgb_unit_bars_k3_max_ansi_rgb.bin` with [QMK Toolbox](https://github.com/qmk/qmk_toolbox): unplug the keyboard, set the side switch to cable mode, hold **Esc** while plugging it in, then click *Flash*. To go back, flash `keychron_k3_max_ansi_rgb_via_official.bin` the same way.
 2. **Addon** — copy `addon/RGBUnitBars` into `World of Warcraft\_classic_beta_\Interface\AddOns\` (or `_classic_era_`), restart the game and enable *RGB Unit Bars*.
 3. **Game settings** — use *Windowed* or *Windowed (Fullscreen)* mode.
-4. **App** — run `RGBUnitBars.exe` with the keyboard connected **by cable**; a plugged-in K3 Max is picked automatically.
+4. **App** — run `RGBUnitBars.exe` with the K3 Max connected **by USB cable**; a plugged-in K3 Max is picked automatically. Bluetooth support is planned.
 
 When WoW is minimized or on a loading screen the keyboard returns to its normal effect within 1.5 s.
 
