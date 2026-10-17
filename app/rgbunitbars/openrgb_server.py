@@ -3,12 +3,15 @@ import os
 import shutil
 import socket
 import subprocess
+import time
 
 from .paths import DATA_DIR, bundle_dir
 
 log = logging.getLogger("RGBUnitBars")
 
 CREATE_NO_WINDOW = 0x08000000
+SERVER_START_TIMEOUT = 15
+SERVER_POLL_INTERVAL = 0.25
 INSTALL_DIR = os.path.join(DATA_DIR, "openrgb")
 CONFIG_DIR = os.path.join(DATA_DIR, "openrgb-config")
 SYSTEM_INSTALL = os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "OpenRGB", "OpenRGB.exe")
@@ -55,7 +58,7 @@ class OpenRGBServer:
         if server_running(self.host, self.port):
             return True
         if self.process is not None and self.process.poll() is None:
-            return False
+            return self._wait_until_running()
         if self.host not in ("127.0.0.1", "localhost"):
             return False
         exe = installed_executable()
@@ -75,6 +78,16 @@ class OpenRGBServer:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+        return self._wait_until_running()
+
+    def _wait_until_running(self):
+        deadline = time.monotonic() + SERVER_START_TIMEOUT
+        while time.monotonic() < deadline:
+            if server_running(self.host, self.port):
+                return True
+            if self.process is not None and self.process.poll() is not None:
+                return False
+            time.sleep(SERVER_POLL_INTERVAL)
         return False
 
     def stop(self):
