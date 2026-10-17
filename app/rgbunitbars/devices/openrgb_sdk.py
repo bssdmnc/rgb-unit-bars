@@ -40,12 +40,23 @@ class OpenRGBKeyboard:
             keyboards = [d for d in keyboards if self.match in d.name.lower()]
         if not keyboards:
             raise DeviceUnavailable("OpenRGB reports no keyboard" + (f" matching '{self.match}'" if self.match else ""))
-        keyboards.sort(key=lambda d: not any(z.type == ZoneType.MATRIX and z.matrix_map for z in d.zones))
-        self.device = keyboards[0]
+        self.device = max(keyboards, key=self._selection_score)
         self.name = f"{self.device.name} (OpenRGB)"
         self.saved_mode = self.device.active_mode
         self.leds, self.led_ids = self._layout(self.device)
         self.led_total = len(self.device.leds)
+
+    @staticmethod
+    def _selection_score(device):
+        matrix_leds = max(
+            (len(zone.leds) for zone in device.zones if zone.type == ZoneType.MATRIX and zone.matrix_map),
+            default=0,
+        )
+        has_direct_mode = any(
+            mode.name.lower() in DIRECT_MODE_NAMES and mode.color_mode == ModeColors.PER_LED
+            for mode in device.modes
+        )
+        return has_direct_mode, matrix_leds, len(device.leds)
 
     @staticmethod
     def _layout(device):

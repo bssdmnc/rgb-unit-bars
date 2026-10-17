@@ -86,6 +86,13 @@ The standard VIA lighting channel 3 (effect / brightness / speed / colour, ids 1
 
 Run OpenRGB with an isolated config that defines a debug keyboard, on a spare port:
 
+Run the automated OpenRGB selection checks from the repository root first:
+
+```
+$env:PYTHONPATH = "app"
+python -m unittest discover -s app/tests -v
+```
+
 ```json
 {"DebugDevices": {"devices": [{"type": "keyboard", "name": "Debug Keyboard", "keyboard": true, "underglow": true}]}}
 ```
@@ -96,6 +103,8 @@ python -m rgbunitbars --device openrgb --openrgb-port 6743
 ```
 
 Read back `client.devices[0].colors` through `matrix_map` to assert which keys are lit. The debug keyboard has a 21×6 ANSI key matrix plus a 10×3 underglow matrix — a good check that only the key matrix is driven.
+
+When OpenRGB exposes several keyboard candidates, the app prefers a per-key Direct mode and then the candidate with the largest MATRIX zone. Use `--keyboard <name>` to select a specific device by name.
 
 ## Releasing
 
