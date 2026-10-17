@@ -6,16 +6,19 @@ Glance down and your keyboard *is* your unit frame: rows of keys fill up and dra
 
 > ⚠️ **This addon needs the free RGB Unit Bars desktop app** (Windows) to drive the keyboard. The addon alone only draws a tiny row of pixels for the app to read. Get the app on GitHub: **[RGB Unit Bars releases](https://github.com/bssdmnc/rgb-unit-bars/releases)**
 
+**Keychron K3 Max currently requires a USB cable. Bluetooth support is planned.**
+
 ## What you see on the keyboard
 
 | Class / resource | Rows (top → bottom) |
 |---|---|
-| Rogue, Druid in Cat Form | combo points · health · energy |
-| Warrior, Druid in Bear Form | health · rage |
-| Mana users | health · mana |
+| Rogue | 2 combo · 2 health · 2 energy |
+| Warrior, Hunter | 3 health · 3 power |
+| Druid | 2 health · 2 power · 2 cast; power colour follows form |
+| Other classes | 2 health · 2 power · 2 cast |
 
 - **Health** uses your class colour (switches to green if it would clash with your resource) and fades to red, pulsing when you are low.
-- **Combo points** light up in five groups and flash at maximum — finisher time.
+- **Combo points** are enabled by default for rogues only; they light up in five groups and flash at maximum — finisher time.
 - **Cast bar** (optional): its own rows, or taking over the health / power rows while you cast. Fill direction, row order and colour are configurable.
 - Empty parts of every bar stay faintly lit, so you always see the full scale.
 
