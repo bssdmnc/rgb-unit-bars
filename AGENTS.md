@@ -48,10 +48,11 @@ One row of **24 physical pixels, 1 px tall**, drawn by a parent-less frame (stra
 | 20 | rows (combo, health, power) / 12 |
 | 21 | (dim, low-health, flags pulse=1 comboFlash=2) / 12 |
 | 22 | (cast mode, cast rows, row order) / 12 |
-| 23 | (cast flags invert=1 mirror=2, 0, 0) / 12 |
+| 23 | (cast flags invert=1 mirror=2, level-up time remaining [0–1], death state: 0 alive, 0.5 dead, 1 ghost) |
 
 * The app grabs four 24×1 regions (top / bottom row of the client area, left- and right-aligned), last good corner first, accepts a row only if the signatures match and the reference ladder is strictly increasing, then inverts values by piecewise-linear interpolation over the ladder — no gamma model needed.
 * Cast modes: 0 off, 1 own rows, 2 instead of health, 3 instead of power, 4 instead of health + power (replacement only while casting). Row orders are the six permutations in `ORDERS` in both the addon and `wow_link.py` — keep them in sync.
+* Pixel 23 green carries the normalized time remaining in a 2.4-second `PLAYER_LEVEL_UP` effect; the addon updates it every UI frame, and the 30 FPS app renders a fixed hot-orange filled disk expanding from the keyboard center in all directions. Keys inside the advancing front remain dimly lit with a subtle shimmer until the return phase, which contracts a vertical orange band with two fading sparks. Pixel 23 blue carries the death state: 0 alive, 0.5 dead before spirit release (keyboard off), 1 ghost (animate a neutral gray-white wave until resurrection). The addon reads `UnitIsGhost` while polling player state and handles `PLAYER_DEAD`/`PLAYER_ALIVE`; it avoids registering `PLAYER_GHOST`, which is unavailable on some supported clients. These fields use previously unused channels and retain protocol version 3 compatibility.
 
 * Colours 13 (health full) and 15–17 (mana, rage, energy) are resolved **per class** before they are drawn: `settings.classColors[CLASS]` override, else automatic — health = `RAID_CLASS_COLORS[class]` unless its hue is within 40° of the class's base resource colour (rogue/energy, warrior/rage, others/mana), then green; resources use the built-in mana/rage/energy colours. Old global colours are migrated into the current class on load. The app is unaware of classes.
 
