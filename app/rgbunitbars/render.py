@@ -18,6 +18,8 @@ FIXED_POWER_COLORS = {
     POWER_FOCUS: (1.0, 0.5, 0.25),
     POWER_RUNIC: (0.0, 0.82, 1.0),
 }
+LEVEL_UP_EFFECT_SECONDS = 2.4
+LEVEL_UP_COLOR = (1.0, 0.28, 0.0)
 
 
 class KeyboardGeometry:
@@ -105,7 +107,57 @@ def power_color(state, settings):
     return FIXED_POWER_COLORS.get(state.power_type, settings.colors["mana"])
 
 
+def level_up_colors(geometry, progress, now):
+    last_row = max(geometry.row_count - 1, 1)
+    colors = []
+    if progress <= 0.5:
+        outward = progress * 2
+        fade = 1 - outward * 0.08
+        for nx, row in geometry.keys:
+            x = (nx - 0.5) * 2
+            y = (row / last_row - 0.5) * 2
+            radius = math.hypot(x, y) / math.sqrt(2)
+            distance = radius - outward
+            inside = radius <= outward
+            shimmer = 0.5 + 0.5 * math.sin(math.atan2(y, x) * 5 + radius * 14 - now * 5)
+            fill = (0.38 + 0.08 * shimmer) * fade if inside else 0
+            front = math.exp(-((distance / 0.11) ** 2)) * 0.62 * fade
+            outer_glow = math.exp(-((distance / 0.25) ** 2)) * 0.16 * fade if not inside else 0
+            colors.append(scale(LEVEL_UP_COLOR, min(fill + front + outer_glow, 1)))
+        return colors
+
+    returning = (progress - 0.5) * 2
+    width = 0.30 * (1 - returning) + 0.035
+    fade = (1 - returning) ** 1.2
+    spark_x = 0.48 * (1 - returning) + 0.09
+    spark_y = 0.28 + 0.12 * math.sin(returning * math.pi)
+    for nx, row in geometry.keys:
+        x = (nx - 0.5) * 2
+        y = (row / last_row - 0.5) * 2
+        stripe = math.exp(-((x / width) ** 2))
+        upper_spark = math.exp(-(((x - spark_x) / 0.10) ** 2 + ((y - spark_y) / 0.13) ** 2))
+        lower_spark = math.exp(-(((x + spark_x) / 0.10) ** 2 + ((y + spark_y) / 0.13) ** 2))
+        intensity = min((stripe * 0.8 + upper_spark + lower_spark) * fade, 1)
+        colors.append(scale(LEVEL_UP_COLOR, intensity))
+    return colors
+
+
 def render(state, settings, geometry, now):
+    if state.dead:
+        return [(0, 0, 0) for _ in geometry.keys]
+    if state.ghost:
+        gray = (0.82, 0.84, 0.86)
+        white = (0.96, 0.97, 0.98)
+        colors = []
+        for nx, row in geometry.keys:
+            mix = (math.sin((nx * 4 + row * 0.45 - now * 2) * math.tau) + 1) / 2
+            colors.append(tuple(int((gray[i] + (white[i] - gray[i]) * mix) * 255) for i in range(3)))
+        return colors
+    if state.level_up:
+        elapsed = (1 - state.level_up) * LEVEL_UP_EFFECT_SECONDS
+        progress = min(max(elapsed / LEVEL_UP_EFFECT_SECONDS, 0), 1)
+        return level_up_colors(geometry, progress, now)
+
     groups = geometry.row_groups(layout_for(state, settings))
     t = min(max((state.health - 0.2) / 0.6, 0.0), 1.0)
     health_rgb = blend_hsv(settings.colors["health_low"], settings.colors["health_full"], t)

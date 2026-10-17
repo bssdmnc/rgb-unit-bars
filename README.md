@@ -10,6 +10,8 @@ Your World of Warcraft health, power and combo points — live on your RGB keybo
 
 * Health uses your class colour (green when it would clash with your resource) and fades to red, pulsing below 25 %. Health and resource colours can be changed per class in `/rub`.
 * Combo points light up in five groups and flash at 5 — finisher time.
+* Level-ups fill the keyboard with a hot-orange disk expanding from the center, keeping passed keys dimly shimmering until the return phase contracts a vertical orange band with two fading sparks; lighting stays off after death until you release your spirit, then a neutral gray-white wave continues until resurrection.
+* Test these effects in-game with `/rub dev levelup` or `/rub dev dead`; run `/rub dev clear` afterward to restore your actual alive/dead state. `/rub dev` lists these commands.
 * Empty parts of a bar stay faintly lit so you always see the full scale.
 * Optional cast bar: its own rows, or taking over the health / power rows while you cast. Row order, fill direction and colour are set in `/rub`.
 

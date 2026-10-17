@@ -46,6 +46,9 @@ class UnitState:
     power_type: int
     cast: float = 0.0
     casting: bool = False
+    level_up: float = 0.0
+    dead: bool = False
+    ghost: bool = False
 
 
 @dataclass
@@ -157,6 +160,15 @@ def decode(px):
     def clamp(value, low, high):
         return min(max(value, low), high)
 
+    colors = {key: tuple(fraction(c) for c in px[13 + i]) for i, key in enumerate(COLOR_KEYS)}
+    combo_rows, health_rows, power_rows = steps(px[20])
+    dim, low, flags = steps(px[21])
+    cast_mode, cast_rows, order = steps(px[22])
+    cast_flags = steps(px[23])[0]
+    level_up = fraction(px[23][1])
+    death_state = fraction(px[23][2])
+    dead = 0.15 < death_state < 0.75
+    ghost = death_state >= 0.75 or 0 < death_state <= 0.15
     state = UnitState(
         health=gray(px[7]),
         power=gray(px[8]),
@@ -164,12 +176,10 @@ def decode(px):
         power_type=round(gray(px[10]) * 10),
         cast=gray(px[11]),
         casting=gray(px[12]) > 0.5,
+        level_up=level_up,
+        dead=bool(dead),
+        ghost=bool(ghost),
     )
-    colors = {key: tuple(fraction(c) for c in px[13 + i]) for i, key in enumerate(COLOR_KEYS)}
-    combo_rows, health_rows, power_rows = steps(px[20])
-    dim, low, flags = steps(px[21])
-    cast_mode, cast_rows, order = steps(px[22])
-    cast_flags = steps(px[23])[0]
     settings = Settings(
         colors=colors,
         combo_rows=clamp(combo_rows, 0, 3),

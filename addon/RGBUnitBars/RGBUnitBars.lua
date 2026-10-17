@@ -20,6 +20,11 @@ local P = {
     castFlags = 24,
 }
 local PIXELS = 24
+local LEVEL_UP_FLASH_DURATION = 2.4
+
+local levelUpUntil = 0
+local playerDeathState = 0
+local deathTest = false
 
 local DEFAULTS = {
     enabled = true,
@@ -379,6 +384,12 @@ local function migrateColors()
     end
 end
 
+local function updateEventPixels(now)
+    local castFlags = (settings.castInvert and 1 or 0) + (settings.castMirror and 2 or 0)
+    local levelUpRemaining = math.min(math.max((levelUpUntil - now) / LEVEL_UP_FLASH_DURATION, 0), 1)
+    paintRGB(P.castFlags, step(castFlags), levelUpRemaining, playerDeathState)
+end
+
 local function updateSettingsPixels()
     paintRaw(1, 1, 0, 1)
     paintRaw(2, 0, 1, 0)
@@ -393,8 +404,22 @@ local function updateSettingsPixels()
     local flags = (settings.pulse and 1 or 0) + (settings.comboFlash and 2 or 0)
     paintRGB(P.effects, step(settings.dim), step(settings.lowHealth), step(flags))
     paintRGB(P.castConfig, step(settings.castMode), step(settings.castRows), step(settings.order))
-    local castFlags = (settings.castInvert and 1 or 0) + (settings.castMirror and 2 or 0)
-    paintRGB(P.castFlags, step(castFlags), 0, 0)
+    updateEventPixels(GetTime())
+end
+
+local function updatePlayerDeathState()
+    if deathTest then
+        return
+    end
+    local ghostOK, ghost = pcall(UnitIsGhost, "player")
+    if ghostOK and ghost then
+        playerDeathState = 1
+        return
+    end
+    local deadOK, dead = pcall(UnitIsDead, "player")
+    if deadOK then
+        playerDeathState = dead and 0.5 or 0
+    end
 end
 
 local function apply()
@@ -413,6 +438,9 @@ end
 
 local elapsed = 0
 frame:SetScript("OnUpdate", function(_, dt)
+    if settings then
+        updateEventPixels(GetTime())
+    end
     elapsed = elapsed + dt
     if elapsed < 0.05 or not settings then
         return
@@ -423,6 +451,7 @@ frame:SetScript("OnUpdate", function(_, dt)
         paintDemo(now)
         return
     end
+    updatePlayerDeathState()
     for name, read in pairs(readers) do
         local ok, err = pcall(read, now)
         if not ok then
@@ -694,7 +723,19 @@ SLASH_RGBUNITBARS1 = "/rub"
 SLASH_RGBUNITBARS2 = "/rgbunitbars"
 SlashCmdList.RGBUNITBARS = function(message)
     local command = strtrim(message or ""):lower()
-    if command == "on" or command == "off" then
+    if command == "dev levelup" then
+        levelUpUntil = GetTime() + LEVEL_UP_FLASH_DURATION
+        print("|cffff00ffRGB Unit Bars|r level-up effect triggered")
+    elseif command == "dev dead" then
+        deathTest = true
+        playerDeathState = 1
+        print("|cffff00ffRGB Unit Bars|r spirit effect triggered; use /rub dev clear to stop")
+    elseif command == "dev clear" then
+        levelUpUntil = 0
+        deathTest = false
+        updatePlayerDeathState()
+        print("|cffff00ffRGB Unit Bars|r test effects cleared")
+    elseif command == "on" or command == "off" then
         settings.enabled = command == "on"
         apply()
         print("|cffff00ffRGB Unit Bars|r " .. (settings.enabled and "enabled" or "disabled"))
@@ -703,6 +744,8 @@ SlashCmdList.RGBUNITBARS = function(message)
         print("|cffff00ffRGB Unit Bars|r preview " .. (demo and "on" or "off"))
     elseif command == "app" then
         showAppNotice()
+    elseif command == "dev" then
+        print("|cffff00ffRGB Unit Bars|r test effects: /rub dev levelup, /rub dev dead, /rub dev clear")
     else
         openPanel()
     end
@@ -711,6 +754,9 @@ end
 
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frame:RegisterEvent("PLAYER_LEVEL_UP")
+frame:RegisterEvent("PLAYER_DEAD")
+frame:RegisterEvent("PLAYER_ALIVE")
 frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 frame:SetScript("OnEvent", function(_, event, name)
     if event == "ADDON_LOADED" then
@@ -729,11 +775,24 @@ frame:SetScript("OnEvent", function(_, event, name)
     end
     if event == "PLAYER_ENTERING_WORLD" and settings then
         migrateColors()
+        updatePlayerDeathState()
         apply()
         if not RGBUnitBarsDB.appNoticeShown then
             RGBUnitBarsDB.appNoticeShown = true
             C_Timer.After(3, showAppNotice)
         end
+        return
+    end
+    if event == "PLAYER_LEVEL_UP" then
+        levelUpUntil = GetTime() + LEVEL_UP_FLASH_DURATION
+        return
+    end
+    if event == "PLAYER_DEAD" then
+        playerDeathState = 0.5
+        return
+    end
+    if event == "PLAYER_ALIVE" then
+        playerDeathState = 0
         return
     end
     layout()

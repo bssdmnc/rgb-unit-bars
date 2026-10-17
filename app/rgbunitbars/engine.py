@@ -11,7 +11,7 @@ from .wow_link import WowLink
 
 log = logging.getLogger("RGBUnitBars")
 
-FPS = 20
+FPS = 30
 KEEPALIVE = 0.5
 IDLE_AFTER = 1.5
 NO_WOW_INTERVAL = 2.0
