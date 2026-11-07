@@ -3,7 +3,7 @@
 ## Notes: Shows your health, power, combo points and cast bar on an RGB keyboard (requires the free RGB Unit Bars desktop app). Keychron K3 Max currently requires USB; Bluetooth support is planned.
 ## Author: introqtua
 ## IconTexture: Interface\AddOns\RGBUnitBars\icon
-## Version: 0.2.2
+## Version: 0.2.3
 ## SavedVariables: RGBUnitBarsDB
 
 RGBUnitBars.lua

@@ -14,6 +14,7 @@ log = logging.getLogger("RGBUnitBars")
 FPS = 30
 KEEPALIVE = 0.5
 IDLE_AFTER = 1.5
+NO_ADDON_IDLE_AFTER = 5.0
 NO_WOW_INTERVAL = 2.0
 NO_ADDON_INTERVAL = 0.5
 KEYBOARD_RETRY = 3.0
@@ -107,9 +108,22 @@ class Engine(threading.Thread):
                 started = time.monotonic()
                 reading, status = link.read()
                 state, settings = reading if reading else (None, None)
-                if state is None and not idle and started - last_state_at > IDLE_AFTER:
-                    device.idle()
-                    idle, last_colors = True, None
+                if state is None and not idle:
+                    idle_after = NO_ADDON_IDLE_AFTER if status == "no-addon" else IDLE_AFTER
+                    if started - last_state_at > idle_after:
+                        device.idle()
+                        idle, last_colors = True, None
+                    elif last_colors is not None and started - last_sent > KEEPALIVE:
+                        try:
+                            device.send(last_colors)
+                            last_sent = started
+                        except DeviceUnavailable as error:
+                            self.set_status("offline", str(error))
+                            if self.backend_is_openrgb(device):
+                                self.server.ensure()
+                            if self.wait(1):
+                                break
+                            continue
                 if state is None:
                     self.set_status(status)
                     if self.wait(NO_WOW_INTERVAL if status == "no-wow" else NO_ADDON_INTERVAL):
