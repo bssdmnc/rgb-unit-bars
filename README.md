@@ -40,7 +40,7 @@ Keyboards that OpenRGB only exposes as a single zone (no per-key matrix) get one
 
 The app ships with [OpenRGB](https://openrgb.org) 1.0 inside: if no OpenRGB server is running, it starts its own copy in the background (no window) and stops it on exit. If you already use OpenRGB, enable its **SDK Server** and the app uses that instead. If the keyboard does not react, close vendor RGB apps (Synapse, iCUE, G HUB…) — they fight over the lighting.
 
-The tray menu shows the current status and the keyboard in use, opens the log (`%LOCALAPPDATA%\RGBUnitBars\log.txt`) and tells you when a new release is out. When the game is minimized or loading, the keyboard returns to its previous lighting after 1.5 s.
+The tray menu shows the current status and the keyboard in use, opens the log (`%LOCALAPPDATA%\RGBUnitBars\log.txt`) and tells you when a new release is out. When WoW is minimized, the keyboard returns to its previous lighting after 1.5 s. If WoW is open but the addon strip is temporarily not visible, the app keeps the last lighting for up to 5 s before handing control back.
 
 ### Running from source
 
@@ -53,7 +53,7 @@ Python 3.11+: `pip install -r app/requirements.txt`, then `run.bat` (tray) or `r
 3. **Game settings** — use *Windowed* or *Windowed (Fullscreen)* mode.
 4. **App** — run `RGBUnitBars.exe` with the K3 Max connected **by USB cable**; a plugged-in K3 Max is picked automatically. Bluetooth support is planned.
 
-When WoW is minimized or on a loading screen the keyboard returns to its normal effect within 1.5 s.
+When WoW is minimized, the keyboard returns to its normal effect within 1.5 s. If the addon strip is not visible during a loading screen, the app keeps the last lighting for up to 5 s before restoring the normal effect.
 
 ### Streaming
 
